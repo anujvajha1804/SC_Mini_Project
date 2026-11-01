@@ -44,7 +44,7 @@ Mini Project/
 ├── ann_model.py                # MLPRegressor training, chronological split, evaluation & inference
 ├── test_suite.py               # Automated testing suite for API, cleaning edge cases, and training
 ├── requirements.txt            # Python dependencies
-├── README.md                   # Complete academic documentation and viva Q&A
+├── README.md                   # Complete academic documentation and architecture details
 └── sample_data/
     └── mumbai_sample.csv       # Real weather dataset fetched from Open-Meteo for Mumbai (2015-2026)
 ```
@@ -176,50 +176,3 @@ On the test set, the persistence baseline achieves MAE = 22.01 W/m², RMSE = 38.
 
 Results change slightly with the data end date. Values shown are from the bundled Mumbai sample data.
 
----
-
-## 10. Known Limitations
-
-1. **Unknown Future Weather:** The model predicts day t+1 using atmospheric state at day t. Unanticipated rapid weather changes cannot be anticipated without weather forecast data.
-2. **Atmospheric Aerosols:** Aerosol data is not used as an input in this project.
-3. **Monsoon Season Volatility:** Higher errors occur in monsoon months due to rapid cloud formation and sudden intermittent rainfall.
-4. **Reanalysis Data vs Single Station:** Data is reanalysis from atmospheric model grids, not a single physical ground weather station pyranometer.
-5. **One Model Per City:** One model is trained per city dynamically; weights are not generalized across different geographic regions.
-6. **Hand-Tuned Hyperparameters:** Hyperparameters (such as 2 hidden layers with 32 and 16 neurons, alpha=0.001, learning rate 0.001) were chosen by hand rather than through automated grid search.
-7. **Offline Mumbai Data Date Limitation:** If saved Mumbai data is used (e.g. offline fallback), the forecast is for the day after that data ends rather than real-time tomorrow.
-8. **Daily Averages vs Hourly Peaks:** A day with 180 W/m² average could have steady moderate light or brief extreme sun punctuated by rain.
-9. **Persistence Baseline Comparison:** The ANN does not clearly beat the persistence baseline, because tomorrow's weather is not an input.
-
----
-
-## 11. Viva Questions and Answers (Soft Computing Lab)
-
-### Q1: What is an Artificial Neural Network (ANN) and why use it for solar radiation prediction?
-**Answer:** An ANN is a computational model inspired by biological neural networks. It consists of layers of interconnected processing nodes (neurons) that map input features to continuous targets through learned weights and non-linear activation functions. Solar radiation has non-linear dependencies on humidity, temperature, and cloud cover that simple linear regression may not capture; an ANN models these non-linear atmospheric interactions effectively.
-
-### Q2: What is the Multilayer Perceptron (MLP) architecture used in this project?
-**Answer:** The architecture is a feedforward MLP with an input layer of 14 features, two hidden layers of 32 and 16 neurons with ReLU activation functions, and a single linear output neuron predicting next-day solar radiation in W/m².
-
-### Q3: Why is standard train/test shuffling not used in this project?
-**Answer:** Weather data is a time series with temporal autocorrelation. Random shuffling causes "data leakage" (or look-ahead bias), where the model trains on future dates and tests on past dates, artificially inflating performance. We use a chronological 80/20 train/test split.
-
-### Q4: Why do we normalize or scale features using `StandardScaler`?
-**Answer:** Features have vastly different numerical ranges (e.g., atmospheric pressure approx 1010 hPa vs. temperature approx 25 °C). Without scaling, features with large numeric scales dominate weight updates during gradient descent. Scaling features to zero mean and unit variance ensures equal weight optimization. The scaler is fit strictly on training data to avoid test set contamination.
-
-### Q5: What is the activation function used, and why ReLU?
-**Answer:** We use the Rectified Linear Unit (ReLU(z) = max(0, z)). ReLU reduces the vanishing gradient problem seen in sigmoid/tanh functions, computes quickly, and introduces non-linearity required to learn complex relationships.
-
-### Q6: How does Backpropagation train the neural network?
-**Answer:** Backpropagation computes the gradient of the loss function (Mean Squared Error) with respect to each network weight using the mathematical chain rule of calculus. These gradients are then fed into the Adam optimization algorithm to iteratively update weights and minimize forecast error.
-
-### Q7: Why are sine and cosine of the day of year included as features?
-**Answer:** The calendar year is cyclical: December 31 (DOY = 365) is physically adjacent to January 1 (DOY = 1). A raw integer representation creates an artificial numerical jump (365 -> 1). Encoding day-of-year as sin(2 * pi * DOY / 365.25) and cos(2 * pi * DOY / 365.25) maps the calendar into a continuous circle, preserving seasonal continuity.
-
-### Q8: What is the "Persistence Baseline" and why is it important in viva evaluation?
-**Answer:** The persistence baseline assumes "tomorrow's solar radiation equals today's solar radiation" (y_pred(t+1) = y(t)). Because weather has day-to-day correlation, persistence is a strong natural baseline. On our test set, the persistence baseline achieves MAE = 22.01 W/m², RMSE = 38.72 W/m², and R² = 0.55, while the ANN achieves MAE = 23.62 W/m², RMSE = 37.06 W/m², and R² = 0.59. The ANN is better on RMSE and R² but slightly worse on MAE than persistence, and the gain over persistence is small.
-
-### Q9: Why is forward-fill with a limit used instead of global mean imputation for missing values?
-**Answer:** Global mean imputation uses future data points to fill past gaps, causing temporal leakage. Forward-fill carries forward only the most recent known valid observation (up to 3 days), reflecting physical persistence without looking into the future.
-
-### Q10: What does an R² score of ~0.59 mean in this context?
-**Answer:** An R² of ~0.59 indicates that the ANN explains approximately 59% of the variance in next-day solar radiation using current-day weather and the past 7 days of radiation. The remaining ~41% variance is likely due to weather changes that occur between day t and day t+1 that the inputs cannot see.
