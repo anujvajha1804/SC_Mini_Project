@@ -76,12 +76,9 @@ def run_pipeline(city: str, force_offline: bool = False):
     loc_info = None
 
     if not is_offline:
-        print(f"Resolving location for '{city}'...")
         loc_info = geocode_city(city)
         if not loc_info:
-            print(f"Warning: Could not geocode '{city}' online.")
             if "mumbai" in city.lower():
-                print("Using default coordinates for Mumbai (19.0760° N, 72.8777° E).")
                 loc_info = {"label": "Mumbai, Maharashtra, India", "latitude": 19.0760, "longitude": 72.8777}
             else:
                 print(f"Error: Unable to locate '{city}'. Please check the spelling.")
@@ -100,7 +97,6 @@ def run_pipeline(city: str, force_offline: bool = False):
     if not is_offline:
         start_date = "2015-01-01"
         end_date = date.today().strftime("%Y-%m-%d")
-        print(f"Fetching historical meteorological records (2015 to {end_date})...")
         try:
             raw_df, last_date_str = data_collection.fetch_open_meteo_daily(
                 latitude=loc_info["latitude"],
@@ -109,10 +105,8 @@ def run_pipeline(city: str, force_offline: bool = False):
                 end_date=end_date,
                 timeout=30,
             )
-            print(f"Retrieved {len(raw_df):,} daily records from Open-Meteo archive (latest: {last_date_str}).")
         except Exception as e:
             if "mumbai" in loc_info["label"].lower() or abs(loc_info["latitude"] - 19.076) < 0.2:
-                print("Online fetch timed out or unavailable. Switching to verified local Mumbai sample data.")
                 is_offline = True
             else:
                 print(f"Error retrieving weather data: {e}")
@@ -122,17 +116,12 @@ def run_pipeline(city: str, force_offline: bool = False):
         sample_path = "sample_data/mumbai_sample.csv"
         raw_df = pd.read_csv(sample_path)
         last_date_str = str(raw_df["date"].dropna().iloc[-1])
-        print(f"Loaded {len(raw_df):,} daily records from local sample dataset ({sample_path}).")
 
     # 3. Data Cleaning and Preprocessing
     clean_df, summary = preprocessing.clean_weather_data(raw_df, radiation_unit="W/m²")
     X, y, feature_cols, future_row, future_date, last_date = preprocessing.create_features_and_target(clean_df)
 
-    print(f"Cleaned samples:     {len(clean_df):,} valid days")
-    print(f"Feature matrix:      {X.shape[0]:,} samples x {X.shape[1]} features (5 weather, 7 lags, 2 cyclical)")
-
     # 4. Model Training
-    print("Training Artificial Neural Network (MLPRegressor)...")
     model, scaler_X, scaler_y, results = ann_model.train_ann(X, y, train_ratio=0.8)
     ann_metrics = ann_model.evaluate_metrics(results["y_test"].values, results["y_pred_test"])
     base_metrics, _ = ann_model.compute_baseline(results["X_test"], results["y_test"])
@@ -142,16 +131,36 @@ def run_pipeline(city: str, force_offline: bool = False):
     interpretation = interpret_radiation(pred_val)
 
     # 6. Evaluation Summary
-    print("-" * 65)
     print("Model Evaluation on Unseen Chronological Test Set (20%):")
     print(f"Training samples:    {results['train_size']:,}")
     print(f"Test samples:        {results['test_size']:,}")
     print()
-    print(f"{'Metric':<26} {'ANN Model':<16} {'Persistence':<16} {'Comparison'}")
-    print(f"{'MAE (Mean Absolute Error)':<26} {ann_metrics['MAE']:.2f} W/m²       {base_metrics['MAE']:.2f} W/m²       Persistence is slightly lower")
-    print(f"{'RMSE (Root Mean Squared)':<26} {ann_metrics['RMSE']:.2f} W/m²       {base_metrics['RMSE']:.2f} W/m²       ANN improves error (-{base_metrics['RMSE'] - ann_metrics['RMSE']:.2f})")
-    print(f"{'MSE (Mean Squared Error)':<26} {ann_metrics['MSE']:.2f} (W/m²)²   {base_metrics['MSE']:.2f} (W/m²)²   ANN reduces large errors")
-    print(f"{'R² Determination Score':<26} {ann_metrics['R2']:.4f}           {base_metrics['R2']:.4f}           ANN explains +{((ann_metrics['R2'] - base_metrics['R2']) * 100):.1f}% variance")
+    mae_diff = ann_metrics['MAE'] - base_metrics['MAE']
+    rmse_diff = base_metrics['RMSE'] - ann_metrics['RMSE']
+    mse_diff = base_metrics['MSE'] - ann_metrics['MSE']
+    r2_diff = (ann_metrics['R2'] - base_metrics['R2']) * 100
+
+    mae_comp = f"Persistence lower by {abs(mae_diff):.2f} W/m²" if mae_diff > 0 else f"ANN lower by {abs(mae_diff):.2f} W/m²"
+    rmse_comp = f"ANN improves by {rmse_diff:.2f} W/m²" if rmse_diff > 0 else f"Persistence lower by {abs(rmse_diff):.2f} W/m²"
+    mse_comp = f"ANN reduces error by {abs(mse_diff):.1f}" if mse_diff > 0 else f"Persistence lower by {abs(mse_diff):.1f}"
+    r2_comp = f"ANN explains +{r2_diff:.1f}% variance" if r2_diff >= 0 else f"Persistence explains +{abs(r2_diff):.1f}% variance"
+
+    ann_mae_str = f"{ann_metrics['MAE']:.2f} W/m²"
+    base_mae_str = f"{base_metrics['MAE']:.2f} W/m²"
+    ann_rmse_str = f"{ann_metrics['RMSE']:.2f} W/m²"
+    base_rmse_str = f"{base_metrics['RMSE']:.2f} W/m²"
+    ann_mse_str = f"{ann_metrics['MSE']:.2f} (W/m²)²"
+    base_mse_str = f"{base_metrics['MSE']:.2f} (W/m²)²"
+    ann_r2_str = f"{ann_metrics['R2']:.4f}"
+    base_r2_str = f"{base_metrics['R2']:.4f}"
+
+    c1, c2, c3 = 28, 20, 20
+    print(f"{'Metric':<{c1}} {'ANN Model':<{c2}} {'Persistence':<{c3}} {'Comparison'}")
+    print(f"{'-' * 26:<{c1}} {'-' * 18:<{c2}} {'-' * 18:<{c3}} {'-' * 30}")
+    print(f"{'MAE (Mean Absolute Error)':<{c1}} {ann_mae_str:<{c2}} {base_mae_str:<{c3}} {mae_comp}")
+    print(f"{'RMSE (Root Mean Squared)':<{c1}} {ann_rmse_str:<{c2}} {base_rmse_str:<{c3}} {rmse_comp}")
+    print(f"{'MSE (Mean Squared Error)':<{c1}} {ann_mse_str:<{c2}} {base_mse_str:<{c3}} {mse_comp}")
+    print(f"{'R² Determination Score':<{c1}} {ann_r2_str:<{c2}} {base_r2_str:<{c3}} {r2_comp}")
 
     # 7. Next-Day Forecast Output
     print("-" * 65)
