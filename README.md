@@ -78,19 +78,5 @@ python3 test_suite.py
 * **Topology:** `14 Inputs -> Dense 32 (ReLU) -> Dense 16 (ReLU) -> Output 1 (Linear)`.
 * **Split:** Chronological 80/20 partition (3,452 train, 864 test) with zero look-ahead leakage.
 * **Optimization:** Adam optimizer ($\eta = 0.001$), MSE loss, and $L_2$ regularization ($\alpha = 0.001$).
-* **Constraint:** Output clipped at $\ge 0.0\text{ W/m²}$ to enforce physical non-negativity.
+* **Constraint:** Output clipped at >= 0.0 W/m² to enforce physical non-negativity.
 
----
-
-## Evaluation on Unseen Test Data (864 Days)
-
-Benchmarked against the standard industrial **Persistence Baseline** ($\hat{y}_{t+1} = y_t$):
-
-| Metric | Persistence Baseline | SolarCast ANN | Comparison |
-| :--- | :---: | :---: | :--- |
-| **MAE** | **22.01 W/m²** | 23.62 W/m² | Persistence is slightly lower on stable days |
-| **RMSE** | 38.72 W/m² | **37.06 W/m²** | **ANN reduces error by 4.3% (cuts large misses)** |
-| **MSE** | 1498.84 (W/m²)² | **1373.70 (W/m²)²** | **ANN reduces squared error by 8.3%** |
-| **R² Score** | 0.5500 | **0.5876** | **ANN explains ~3.8% more variance** |
-
-*(Results evaluated on the bundled Mumbai sample dataset; values change slightly with the data end date).*
