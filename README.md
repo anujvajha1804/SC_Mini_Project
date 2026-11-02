@@ -25,12 +25,11 @@ Solar Index (W/m²) = (Shortwave Radiation Sum in MJ/m² × 1,000,000 Joules/MJ)
 ## 2. Technology Stack & Design Principles
 
 - **Language:** Python 3.9+
-- **Web UI & Dashboard:** Streamlit
+- **Interface:** Command-Line Interface (CLI)
 - **Machine Learning & Preprocessing:** scikit-learn (`MLPRegressor`, `StandardScaler`, `mean_absolute_error`, `mean_squared_error`, `r2_score`)
 - **Data Manipulation:** pandas, numpy
-- **Plotting & Visualizations:** matplotlib
 - **API Communication:** requests
-- **Design Constraint:** Completely free, lightweight, zero external paid services, zero API keys required, no heavy deep learning frameworks (no TensorFlow / PyTorch / Docker).
+- **Design Constraint:** Completely free, lightweight, zero external paid services, zero API keys required, no heavy frameworks (no TensorFlow / PyTorch / Docker).
 
 ---
 
@@ -38,7 +37,7 @@ Solar Index (W/m²) = (Shortwave Radiation Sum in MJ/m² × 1,000,000 Joules/MJ)
 
 ```text
 Mini Project/
-├── app.py                      # Streamlined single-screen web UI with geocoding and 1-click forecast
+├── main.py                     # Clean command-line interface with geocoding, training & forecast
 ├── data_collection.py          # Open-Meteo API data fetcher with hourly fallback & units conversion
 ├── preprocessing.py            # Data cleaning pipeline, alias mapper, outlier filter, lag generator
 ├── ann_model.py                # MLPRegressor training, chronological split, evaluation & inference
@@ -75,11 +74,17 @@ To verify all modules and test edge cases (missing columns, duplicates, physical
 python3 test_suite.py
 ```
 
-### Step 5: Launch the Streamlit application
+### Step 5: Launch the CLI application
 ```bash
-streamlit run app.py
+# Interactive mode (prompts for city or defaults to Mumbai)
+python3 main.py
+
+# Or pass a city directly
+python3 main.py --city "Mumbai, Maharashtra"
+
+# Or run offline with verified local sample data
+python3 main.py --offline
 ```
-Open your browser at `http://localhost:8501`.
 
 ---
 
@@ -99,7 +104,7 @@ Open your browser at `http://localhost:8501`.
 - **Fallback mechanism:** If the network is unavailable for Mumbai, the application automatically loads the bundled historical dataset (`sample_data/mumbai_sample.csv`) as an offline fallback.
 
 ### B. City Geocoding Search
-- The app uses the free Open-Meteo Geocoding API (`https://geocoding-api.open-meteo.com/v1/search`) to resolve any city name into latitude and longitude coordinates automatically.
+- The CLI uses the free Open-Meteo Geocoding API (`https://geocoding-api.open-meteo.com/v1/search`) to resolve any city name into latitude and longitude coordinates automatically.
 - No manual coordinate entry is needed. Default city: **Mumbai**.
 
 ---

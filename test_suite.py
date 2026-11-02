@@ -10,7 +10,7 @@ import ann_model
 import data_collection
 import preprocessing
 
-print("=== 1. Testing API Data Collection & Edge Cases ===")
+print("[Test 1/3] API Data Collection & Edge Cases")
 # A. Real Mumbai fetch
 try:
     df_api, latest_date = data_collection.fetch_open_meteo_daily(
@@ -35,7 +35,7 @@ except ValueError as ve:
     print(f"✓ Invalid date range caught properly: {ve}")
 
 
-print("\n=== 2. Testing Preprocessing Edge Cases ===")
+print("\n[Test 2/3] Preprocessing Edge Cases")
 # A. Missing required columns
 sample_df = pd.read_csv("sample_data/mumbai_sample.csv")
 missing_col_df = sample_df.drop(columns=["pressure", "wind_speed"])
@@ -76,7 +76,7 @@ assert abs(raw_wm2 - converted_wm2) < 1e-4, f"Conversion error: {raw_wm2} vs {co
 print(f"✓ MJ/m² to W/m² conversion tested: {raw_wm2:.2f} W/m² matches converted {converted_wm2:.2f} W/m².")
 
 
-print("\n=== 3. Testing Full Dataset, ANN Training & Prediction ===")
+print("\n[Test 3/3] Full Dataset, ANN Training & Prediction")
 full_clean, full_summary = preprocessing.clean_weather_data(sample_df)
 X, y, feature_cols, future_row, future_date, last_date = preprocessing.create_features_and_target(full_clean)
 print(f"✓ Feature matrix constructed: {X.shape[0]} samples, {X.shape[1]} features.")
@@ -93,4 +93,4 @@ print(f"   ANN Metrics:      MAE={ann_metrics['MAE']}, RMSE={ann_metrics['RMSE']
 print(f"   Baseline Metrics: MAE={base_metrics['MAE']}, RMSE={base_metrics['RMSE']}, R²={base_metrics['R2']}")
 print(f"   Next Day Forecast: {pred_next} W/m² on {future_date.strftime('%Y-%m-%d')}")
 
-print("\nALL AUTOMATED TESTS PASSED SUCCESSFULLY!")
+print("\nAll automated tests completed successfully.")

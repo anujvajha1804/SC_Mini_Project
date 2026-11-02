@@ -12,6 +12,3 @@ ENV/
 # Operating System Files
 .DS_Store
 Thumbs.db
-
-# Streamlit credentials (local only)
-.streamlit/credentials.toml
